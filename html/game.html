@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+<head>
+    <title>Socket.IO chat</title>
+    <link rel="stylesheet" type="text/css" href="../style.css">
+</head>
+<script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+<script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+
+
+<body>
+<h1> TIC TAC TOE </h1>
+
+<h4> by GargolinPavel</h4>
+<div>You're <%=whois%> </div>
+<div id="online"> </div>
+<br>
+<br>
+<br>
+
+<div id="board-outer" class="center">
+    <table id="board">
+        <tr class="row">
+            <td id="a1"></td>
+            <td id="a2"></td>
+            <td id="a3"></td>
+        </tr>
+        <tr class="row">
+            <td id="b1"></td>
+            <td id="b2"></td>
+            <td id="b3"></td>
+        </tr>
+        <tr class="row">
+            <td id="c1"></td>
+            <td id="c2"></td>
+            <td id="c3"></td>
+        </tr>
+    </table>
+</div>
+</body>
+<script>
+        var socket = io();
+        var whois = '<%=whois%>';
+        var gameNumber='<%=gameNumber%>';
+        var onlineString='';
+        socket.emit('handshake', {'whois':whois,'gameNumber':gameNumber});
+        socket.on(gameNumber.toString(), function (online) {
+            var onlineString='';
+            console.log(JSON.stringify(online));
+            if (online.X==true) onlineString=onlineString+'X is online <br>';
+            else onlineString=onlineString+'X is offline <br>';
+            if (online.O==true) onlineString=onlineString+'Y is online <br>';
+            else onlineString=onlineString+'Y is offline <br>';
+            onlineString=onlineString+'There are'+online.GUESTS;
+            if (document.getElementById("online")!=null) document.getElementById("online").innerHTML=onlineString;
+        });
+        socket.on(gameNumber.toString()+'move', function (move) {
+            console.log(JSON.stringify(move))
+          board[move.field]=move.whois;
+          document.getElementById(move.field).innerHTML=board[move.field];
+        });
+        $('form').submit(function(){
+            console.log("GHH");
+            socket.emit('chat message', $('#m').val());
+            $('#m').val('');
+            return false;
+        });
+        socket.on('chat message', function(msg){
+            $('#messages').append($('<li>').text(msg));
+        });
+        var human = 'x'; // turn = 0
+        var computer = 'o'; // turn = 1
+        var compMove;
+        var turn = 0; // toggles btw 0 and 1 for switching turns
+
+        var boardCheck; // function to check value in each cell
+
+        function Board() {
+            this.a1 = '<%=a1%>';
+            this.b1 = '<%=b1%>';
+            this.c1 = '<%=c1%>';
+            this.a2 = '<%=a2%>';
+            this.b2 = '<%=b2%>';
+            this.c2 = '<%=c2%>';
+            this.a3 = '<%=a3%>';
+            this.b3 = '<%=b3%>';
+            this.c3 = '<%=c3%>';
+        }
+        var checkWin; // function that checks the board for winning combo
+        var xWin = false; // true if X wins
+        var oWin = false; // true if O wins
+        console.log("WINN");
+        $(document).ready(function() {
+            var board=new Board();
+            $( "td" ).each(function() {
+                $(this).text(board[$( this ).attr('id')]);
+                console.log(board[$( this ).attr('id')]);
+            });
+            $("td").click(function(event) {
+                if ($(this).text()=="") {
+                    $(this).text(whois);
+                    if (whois=='GUEST') return;
+                    socket.emit('move', {'whois':whois.toString(), 'field': event.target.id.toString(),'gameNumber':gameNumber});
+                    console.log(whois);
+                }
+            });
+        });
+
+</script>
+</html>
