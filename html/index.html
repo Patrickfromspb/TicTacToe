@@ -6,9 +6,13 @@
 
 
 <body>
-<h1>Welcome, Stranger</h1>
-    <h4>localhost:3000/game/<%=result%></h4><br>
-<iframe src="/game/<%=result%>"width="400" height="700"></iframe>
+<div style="width:100%; background: palegreen;">
+<div id="container" style=" margin: auto;position: relative; text-align: left;left: 40%; ">
+    <h2>Welcome, Stranger. <br> You are Beautiful</h2>
+    <h4>localhost:3000/game/<%=result%><br> Share this link with your friend and start playing</h4><br>
+</div>
+</div>>
+<iframe style="width: 100%; height: 400px; border: 0" src="/game/<%=result%>"></iframe>
 </body>
 
 </html>

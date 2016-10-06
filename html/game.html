@@ -10,16 +10,22 @@
 
 
 <body>
-<h1> TIC TAC TOE </h1>
 
-<h4> by GargolinPavel</h4>
-<div>You're <%=whois%> </div>
-<div id="online"> </div>
-<br>
-<br>
-<br>
+<div id="left">
+    <h1> TIC TAC TOE </h1>
+    <br>
+    <h4> by Gargolin Pavel</h4>
+    <br>
+    <h4>You're <%=whois%> </h4>
+    <br>
+    <h4 id="online"></h4>
+    <br>
+    <h4 id="info"></h4>
+</div>
 
 <div id="board-outer" class="center">
+    <br>
+    <br>
     <table id="board">
         <tr class="row">
             <td id="a1"></td>
@@ -38,74 +44,135 @@
         </tr>
     </table>
 </div>
+</div>
+<div id="right">
+    <h3>Messages</h3>
+    <div id="messages"></div>
+    <form action="">
+        <input id="m" autocomplete="off"/>
+        <button>Send</button>
+    </form>
+</div>
 </body>
 <script>
-        var socket = io();
-        var whois = '<%=whois%>';
-        var gameNumber='<%=gameNumber%>';
-        var onlineString='';
-        socket.emit('handshake', {'whois':whois,'gameNumber':gameNumber});
-        socket.on(gameNumber.toString(), function (online) {
-            var onlineString='';
-            console.log(JSON.stringify(online));
-            if (online.X==true) onlineString=onlineString+'X is online <br>';
-            else onlineString=onlineString+'X is offline <br>';
-            if (online.O==true) onlineString=onlineString+'Y is online <br>';
-            else onlineString=onlineString+'Y is offline <br>';
-            onlineString=onlineString+'There are'+online.GUESTS;
-            if (document.getElementById("online")!=null) document.getElementById("online").innerHTML=onlineString;
-        });
-        socket.on(gameNumber.toString()+'move', function (move) {
-            console.log(JSON.stringify(move))
-          board[move.field]=move.whois;
-          document.getElementById(move.field).innerHTML=board[move.field];
-        });
-        $('form').submit(function(){
-            console.log("GHH");
-            socket.emit('chat message', $('#m').val());
-            $('#m').val('');
-            return false;
-        });
-        socket.on('chat message', function(msg){
-            $('#messages').append($('<li>').text(msg));
-        });
-        var human = 'x'; // turn = 0
-        var computer = 'o'; // turn = 1
-        var compMove;
-        var turn = 0; // toggles btw 0 and 1 for switching turns
+    var whois = '<%=whois%>';
+    var socket = io();
+    var board;
+    var endPosition;
+    function Board() {
+        this.a1 = '<%=a1%>';
+        this.b1 = '<%=b1%>';
+        this.c1 = '<%=c1%>';
+        this.a2 = '<%=a2%>';
+        this.b2 = '<%=b2%>';
+        this.c2 = '<%=c2%>';
+        this.a3 = '<%=a3%>';
+        this.b3 = '<%=b3%>';
+        this.c3 = '<%=c3%>';
+        this.moveCount = parseInt('<%=moveCount%>');
+        this.gameNumber = parseInt('<%=gameNumber%>');
+    }
+    ;
+    socket.emit('handshake', {'whois': whois, 'gameNumber': '<%=gameNumber%>'});
+    socket.on('<%=gameNumber%>', function (online) {
+        var onlineString = '';
+        console.log(JSON.stringify(online));
+        if (online.X > 0) onlineString = onlineString + 'X is online <br>';
+        else onlineString = onlineString + 'X is offline <br>';
+        if (online.O > 0) onlineString = onlineString + 'O is online <br>';
+        else onlineString = onlineString + 'O is offline <br>';
+        if (parseInt(online.GUESTS)>0)onlineString = onlineString + online.GUESTS+' Watching';
+        if (document.getElementById("online") != null) document.getElementById("online").innerHTML = onlineString;
+    });
+    socket.on('<%=gameNumber%>move', function (receivedBoard) {
+        board.a1 = receivedBoard.a1;
+        board.b1 = receivedBoard.b1;
+        board.c1 = receivedBoard.c1;
+        board.a2 = receivedBoard.a2;
+        board.b2 = receivedBoard.b2;
+        board.c2 = receivedBoard.c2;
+        board.a3 = receivedBoard.a3;
+        board.b3 = receivedBoard.b3;
+        board.c3 = receivedBoard.c3;
+        board.moveCount = receivedBoard.moveCount;
+        setFields();
+    });
+    $('form').submit(function () {
+        console.log("GHH");
+        socket.emit('message', {'gameNumber': board.gameNumber, 'text': whois + ' wrote: ' + $('#m').val()});
+        $('#m').val('');
+        return false;
+    });
+    socket.on('<%=gameNumber%>message', function (receivedChat) {
+        var output = '';
+        console.log(JSON.stringify(receivedChat));
+        for (i = 0; i < receivedChat.length; i++)output = output + receivedChat[i] + "<br>";
+        document.getElementById("messages").innerHTML = output;
 
-        var boardCheck; // function to check value in each cell
+    });
 
-        function Board() {
-            this.a1 = '<%=a1%>';
-            this.b1 = '<%=b1%>';
-            this.c1 = '<%=c1%>';
-            this.a2 = '<%=a2%>';
-            this.b2 = '<%=b2%>';
-            this.c2 = '<%=c2%>';
-            this.a3 = '<%=a3%>';
-            this.b3 = '<%=b3%>';
-            this.c3 = '<%=c3%>';
+    $(document).ready(function () {
+        endPosition = true;
+        board = new Board();
+        console.log(JSON.stringify(board));
+        setFields();
+        $("td").click(function (event) {
+            if ((((whois.length < 2) && (endPosition)) && ($(this).text() == ""))) {
+                if (((board.moveCount % 2 == 0) && (whois == 'X')) || ((board.moveCount % 2 == 1) && (whois !== 'X')))
+                    socket.emit('move', {
+                        'whois': whois.toString(),
+                        'field': event.target.id.toString(),
+                        'gameNumber': board.gameNumber,
+                        'moveCount': board.moveCount
+
+                    });
+                else document.getElementById("info").innerHTML = "Not your move right now, please Wait";
+                ;
+            }
+        });
+    });
+    function checkFinal() {
+        if (board.moveCount > 8) {
+            document.getElementById("online").innerHTML = 'It is Draw';
+            endPosition = false;
         }
-        var checkWin; // function that checks the board for winning combo
-        var xWin = false; // true if X wins
-        var oWin = false; // true if O wins
-        console.log("WINN");
-        $(document).ready(function() {
-            var board=new Board();
-            $( "td" ).each(function() {
-                $(this).text(board[$( this ).attr('id')]);
-                console.log(board[$( this ).attr('id')]);
-            });
-            $("td").click(function(event) {
-                if ($(this).text()=="") {
-                    $(this).text(whois);
-                    if (whois=='GUEST') return;
-                    socket.emit('move', {'whois':whois.toString(), 'field': event.target.id.toString(),'gameNumber':gameNumber});
-                    console.log(whois);
-                }
-            });
-        });
+        check('X');
+        check('O');
+    }
+    function check(player) {
+        if ((board.a1 == player) && (board.b1 == player) && (board.c1 == player)) winningAnimation(player, 'a1', 'b1', 'c1');
+        if ((board.a2 == player) && (board.b2 == player) && (board.c2 == player)) winningAnimation(player, 'a2', 'b2', 'c2');
+        if ((board.a3 == player) && (board.b3 == player) && (board.c3 == player)) winningAnimation(player, 'a3', 'b3', 'c3');
+        if ((board.a1 == player) && (board.a2 == player) && (board.a3 == player)) winningAnimation(player, 'a1', 'a2', 'a3');
+        if ((board.b1 == player) && (board.b2 == player) && (board.b3 == player)) winningAnimation(player, 'b1', 'b2', 'b3');
+        if ((board.c1 == player) && (board.c2 == player) && (board.c3 == player)) winningAnimation(player, 'c1', 'c2', 'c3');
+        if ((board.a1 == player) && (board.b2 == player) && (board.c3 == player)) winningAnimation(player, 'a1', 'b2', 'c3');
+        if ((board.a3 == player) && (board.b2 == player) && (board.c1 == player)) winningAnimation(player, 'a3', 'b2', 'c1');
+    }
+    function winningAnimation(player, field1, field2, field3) {
+        endPosition = false;
+        var colorVariable = ['pink', 'yellow', 'green', 'red', 'navy', 'green', 'pink'];
+        var i = 0;
+        var myVar = setInterval(function () {
+            i = (i + 1) % colorVariable.length;
+            document.getElementById(field1).style.backgroundColor = colorVariable[i];
+            document.getElementById(field2).style.backgroundColor = colorVariable[i];
+            document.getElementById(field3).style.backgroundColor = colorVariable[i];
+        }, 500)
 
+        $(field1).first().animate({backgroundColor: '#99cc00'}, 2000);
+        $(field2).first().animate({backgroundColor: '#99cc00'}, 2000);
+        $(field3).first().animate({backgroundColor: '#99cc00'}, 2000);
+        if (whois.length > 2) document.getElementById("online").innerHTML = player + " has won.";
+        else if (whois == player) document.getElementById("online").innerHTML = "You have won. Our Congratulations";
+        else document.getElementById("online").innerHTML = "You have lost. You will win some next time";
+    }
+    function setFields() {
+        $("td").each(function () {
+            $(this).text(board[$(this).attr('id')]);
+            console.log(board[$(this).attr('id')]);
+        });
+        checkFinal();
+    }
 </script>
 </html>
