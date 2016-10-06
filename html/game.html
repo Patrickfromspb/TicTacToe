@@ -58,7 +58,7 @@
     var whois = '<%=whois%>';
     var socket = io();
     var board;
-    var endPosition;
+    var endPosition; //flag for end of game
     function Board() {
         this.a1 = '<%=a1%>';
         this.b1 = '<%=b1%>';
@@ -97,26 +97,27 @@
         board.moveCount = receivedBoard.moveCount;
         setFields();
     });
+    // message sends to server
     $('form').submit(function () {
-        console.log("GHH");
         socket.emit('message', {'gameNumber': board.gameNumber, 'text': whois + ' wrote: ' + $('#m').val()});
         $('#m').val('');
         return false;
     });
+    // receive chat log an output to page
     socket.on('<%=gameNumber%>message', function (receivedChat) {
         var output = '';
         console.log(JSON.stringify(receivedChat));
         for (i = 0; i < receivedChat.length; i++)output = output + receivedChat[i] + "<br>";
         document.getElementById("messages").innerHTML = output;
-
     });
 
     $(document).ready(function () {
         endPosition = true;
         board = new Board();
-        console.log(JSON.stringify(board));
         setFields();
         $("td").click(function (event) {
+            // whois.length checks if whois is X or O and not GUEST
+            // also proceed only if cell is not occupied
             if ((((whois.length < 2) && (endPosition)) && ($(this).text() == ""))) {
                 if (((board.moveCount % 2 == 0) && (whois == 'X')) || ((board.moveCount % 2 == 1) && (whois !== 'X')))
                     socket.emit('move', {
@@ -124,7 +125,6 @@
                         'field': event.target.id.toString(),
                         'gameNumber': board.gameNumber,
                         'moveCount': board.moveCount
-
                     });
                 else document.getElementById("info").innerHTML = "Not your move right now, please Wait";
                 ;
@@ -132,14 +132,17 @@
         });
     });
     function checkFinal() {
+
+        check('X');
+        check('O');
+        // check if all cells are occuiped
         if (board.moveCount > 8) {
             document.getElementById("online").innerHTML = 'It is Draw';
             endPosition = false;
         }
-        check('X');
-        check('O');
     }
     function check(player) {
+        // check all winning combinations
         if ((board.a1 == player) && (board.b1 == player) && (board.c1 == player)) winningAnimation(player, 'a1', 'b1', 'c1');
         if ((board.a2 == player) && (board.b2 == player) && (board.c2 == player)) winningAnimation(player, 'a2', 'b2', 'c2');
         if ((board.a3 == player) && (board.b3 == player) && (board.c3 == player)) winningAnimation(player, 'a3', 'b3', 'c3');
@@ -151,6 +154,7 @@
     }
     function winningAnimation(player, field1, field2, field3) {
         endPosition = false;
+        //animation
         var colorVariable = ['pink', 'yellow', 'green', 'red', 'navy', 'green', 'pink'];
         var i = 0;
         var myVar = setInterval(function () {
@@ -159,10 +163,6 @@
             document.getElementById(field2).style.backgroundColor = colorVariable[i];
             document.getElementById(field3).style.backgroundColor = colorVariable[i];
         }, 500)
-
-        $(field1).first().animate({backgroundColor: '#99cc00'}, 2000);
-        $(field2).first().animate({backgroundColor: '#99cc00'}, 2000);
-        $(field3).first().animate({backgroundColor: '#99cc00'}, 2000);
         if (whois.length > 2) document.getElementById("online").innerHTML = player + " has won.";
         else if (whois == player) document.getElementById("online").innerHTML = "You have won. Our Congratulations";
         else document.getElementById("online").innerHTML = "You have lost. You will win some next time";

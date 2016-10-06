@@ -48,14 +48,14 @@ app.get('/game*', function (req, res) { // url to game is "game" + number of it
         }
     res.render(__dirname + '/html/error.html');
 });
-
+//server sends his responses titled gameNumber+something so only sockets with this gameNumber can receive
 io.on('connection', function (socket) {
-    console.log(socket.id);
-    socket.on('handshake', function (msg) { // client emits handshake an we send him chat log and online status for his game
+        //console.log(socket.id);
+    socket.on('handshake', function (msg) { // client emits handshake an we send him chat log and online status of players and guests for his game
         for (i = 0; i < collection.length; i++)
             if (collection[i].gameNumber.toString() == msg.gameNumber) {
-                collection[i].clients.push({'id': socket.id, 'whois': msg.whois});// array client holds
-                console.log(JSON.stringify(collection[i].clients));
+                collection[i].clients.push({'id': socket.id, 'whois': msg.whois});// array client holds for each tictactoe game sockets and what is assigned to it
+                // all of clients for this game we find numbers of X , O and GUESTS connection and send to socket that are able to receive messages titled game number
                 var xCount = 0;
                 var yCount = 0;
                 var guestCount = 0;
@@ -69,14 +69,15 @@ io.on('connection', function (socket) {
                     'O': yCount,
                     'GUESTS': guestCount
                 });
-                return;
                 io.emit(msg.gameNumber.toString() + 'message', collection[i].chat);
+                return;
             }
     });
     socket.on('move', function (msg) {
-        console.log('move:' + JSON.stringify(msg));
+        //we need to find game with this number
         for (i = 0; i < collection.length; i++)
             if (collection[i].gameNumber.toString() == msg.gameNumber.toString()) {
+            // update state of moves for this game and send to clients that able to receive  gamenumber+move
                 msg.moveCount++;
                 collection[i].board[msg.field] = msg.whois;
                 collection[i].board.moveCount++;
@@ -86,15 +87,16 @@ io.on('connection', function (socket) {
     });
     socket.on('message', function (msg) {
         for (i = 0; i < collection.length; i++)
+            //   update state of chat loh for this game and send to clients that able to receive  gamenumber+log
             if (collection[i].gameNumber.toString() == msg.gameNumber.toString()) {
                 collection[i].chat.push(msg.text);
-                console.log(JSON.stringify(collection[i].chat))
                 io.emit(msg.gameNumber.toString() + 'message', collection[i].chat);
                 return;
             }
     });
     socket.on('disconnect', function () {
-        console.log('Got disconnect!' + socket.id);
+        // we need to find socket.id in connection.sockets and update online status to this game by removing this socket id an sends to all socket from this game
+        //console.log('Got disconnect!' + socket.id);
         for (i = 0; i < collection.length; i++)
             for (j = 0; j < collection[i].clients.length; j++)
                 if (collection[i].clients[j].id == socket.id) {
@@ -102,7 +104,6 @@ io.on('connection', function (socket) {
                     var xCount = 0;
                     var yCount = 0;
                     var guestCount = 0;
-                    console.log(JSON.stringify(collection[i].clients));
                     for (k = 0; k < collection[i].clients.length; k++) {
                         if (collection[i].clients[k].whois == 'X') xCount++;
                         if (collection[i].clients[k].whois == 'O') yCount++;
@@ -117,26 +118,24 @@ io.on('connection', function (socket) {
                 }
     });
 });
-
+// update next cookie number
 function nextCookie() {
     cook = cook + (Math.floor(Math.random() * 30) + 1) * 4;
     return cook * 7 * 239 * 671;
 }
-
+// first and second holds cookies of a player
 function Tictactoe(gameNumber, cookies) {
     this.gameNumber = gameNumber;
-    this.first = cookies;
+    this.first = cookies; // set cookies of a creator to first who plays X
     this.second = 0;
-    this.X = false;
-    this.Y = false;
-    this.GUESTS = 0;
     this.chat = [];
     this.board = new Board(gameNumber);
     this.clients = [];
 }
+
 function Board(gameNumber) {
     this.gameNumber = gameNumber;
-    this.whois = "X";
+    this.whois = "X"; // this var is changes according to which board is currently transmits and has no meaning to server
     this.moveCount = 0;
     this.a1 = "";
     this.b1 = "";
@@ -149,6 +148,5 @@ function Board(gameNumber) {
     this.c3 = "";
 
 };
-http.listen(3000, function () {
-    console.log('listening on *:3000');
-});
+
+http.listen(3000, function () {});
